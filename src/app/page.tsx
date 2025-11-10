@@ -242,7 +242,7 @@ const BannerPrincipal = ({ item, aoAssistir }: { item: any, aoAssistir: (id: str
         </p>
         <button
           onClick={() => aoAssistir(item.imdbID)}
-          className="bg-white text-black px-8 py-3 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+          className="bg-yellow-400 text-black px-8 py-3 font-bold rounded-lg hover:bg-gray-200 transition-colors"
         >
           Assistir
         </button>
@@ -279,9 +279,9 @@ const LinhaDeMidia = ({ title, media, aoClicarNoCartao }: { title: string, media
                 ((e.target as HTMLImageElement).src = IMAGEM_PLACEHOLDER)
               }
             />
-            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 flex flex-col justify-end p-2 transition-all">
-              <h3 className="text-sm font-bold truncate">{item.Title}</h3>
-              <p className="text-xs text-yellow-400">
+            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-80 flex flex-col justify-end p-2 transition-all">
+              <h3 className="text-sm font-bold truncate text-white">{item.Title}</h3>
+              <p className="text-xs text-white">
                 {item.Year} ({item.Type === "series" ? "Série" : "Filme"})
               </p>
             </div>

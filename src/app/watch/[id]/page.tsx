@@ -196,7 +196,7 @@ export default function PaginaAssistir() {
           {midia.Type === "movie" && (
             <button
               onClick={() => abrirPlayer('movie', id)}
-              className="bg-white text-black px-8 py-3 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+              className="bg-yellow-400 text-black px-8 py-3 font-bold rounded-lg hover:bg-gray-200 transition-colors"
             >
               Assistir
             </button>
