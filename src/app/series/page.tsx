@@ -135,7 +135,7 @@ export default function SeriePage() {
   const seasonCount = media.totalSeasons ? parseInt(media.totalSeasons, 10) : 0;
 
   return (
-    <div className="min-h-screen bg-black font-sans text-white p-8">
+    <div className="min-h-screen bg-black font-sans text-white p-8 mb-4">
       <div className="container mx-auto">
         <div className="flex flex-col md:flex-row gap-8">
           <div className="md:w-1/3">

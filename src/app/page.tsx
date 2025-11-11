@@ -227,7 +227,7 @@ const BannerPrincipal = ({ item, aoAssistir }: { item: any, aoAssistir: (id: str
 
   return (
     <div
-      className="relative h-[550px] mb-8 -mx-8 -mt-8"
+      className="relative h-[550px] mb-8"
       style={{
         backgroundImage: `url(${item.Backdrop})`,
         backgroundSize: "cover",
@@ -242,7 +242,7 @@ const BannerPrincipal = ({ item, aoAssistir }: { item: any, aoAssistir: (id: str
         </p>
         <button
           onClick={() => aoAssistir(item.imdbID)}
-          className="bg-yellow-400 text-black px-8 py-3 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+          className="bg-yellow-400 text-black px-8 py-3 font-bold rounded-lg hover:bg-yellow-500 transition-colors"
         >
           Assistir
         </button>
