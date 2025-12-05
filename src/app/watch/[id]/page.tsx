@@ -12,10 +12,41 @@ const BASE_URL_IMAGEM = "https://image.tmdb.org/t/p/original";
 const URL_IMAGEM_POSTER = "https://image.tmdb.org/t/p/w500";
 const IMAGEM_PLACEHOLDER = "https://placehold.co/300x450/18181b/ffffff?text=Sem+Poster";
 
-async function buscarDetalhesMidia(id: string) {
+// Interfaces TypeScript
+interface Genre {
+  id: number;
+  name: string;
+}
+
+interface ExternalIds {
+  imdb_id: string | null;
+}
+
+interface DetalhesMidia {
+  imdbID: string | null;
+  Title: string;
+  Year: string;
+  Plot: string;
+  Poster: string;
+  Backdrop: string | null;
+  Runtime: string;
+  Genre: string;
+  imdbRating: string;
+  Type: 'movie' | 'series';
+  totalSeasons?: number;
+}
+
+interface Episodio {
+  Title: string;
+  Episode: string;
+  imdbRating: string;
+  imdbID: string;
+}
+
+async function buscarDetalhesMidia(id: string): Promise<DetalhesMidia | null> {
   try {
     let response;
-    let tipoDeMidia = 'movie';
+    let tipoDeMidia: 'movie' | 'series' = 'movie';
     try {
       response = await axios.get(`${BASE_URL}/movie/${id}`.trim(), {
         params: { api_key: CHAVE_API_TMDB, language: "pt-BR", append_to_response: 'external_ids' },
@@ -36,7 +67,7 @@ async function buscarDetalhesMidia(id: string) {
       Poster: item.poster_path ? `${URL_IMAGEM_POSTER}${item.poster_path}` : IMAGEM_PLACEHOLDER,
       Backdrop: item.backdrop_path ? `${BASE_URL_IMAGEM}${item.backdrop_path}` : null,
       Runtime: item.runtime ? `${item.runtime} min` : (item.episode_run_time && item.episode_run_time.length > 0 ? `${item.episode_run_time[0]} min` : 'N/A'),
-      Genre: item.genres.map((g: any) => g.name).join(', '),
+      Genre: item.genres.map((g: Genre) => g.name).join(', '),
       imdbRating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
       Type: tipoDeMidia,
       totalSeasons: item.number_of_seasons,
@@ -47,12 +78,12 @@ async function buscarDetalhesMidia(id: string) {
   }
 }
 
-async function buscarEpisodiosTemporada(id: string, season: number) {
+async function buscarEpisodiosTemporada(id: string, season: number): Promise<Episodio[]> {
   try {
     const response = await axios.get("https://www.omdbapi.com/", {
       params: { apikey: CHAVE_API_OMDB, i: id, Season: season },
     });
-    return response.data.Episodes;
+    return response.data.Episodes || [];
   } catch (error) {
     console.error(`Erro ao buscar episódios da temporada ${season}:`, error);
     return [];
@@ -62,11 +93,11 @@ async function buscarEpisodiosTemporada(id: string, season: number) {
 export default function PaginaAssistir() {
   const parametros = useParams();
   const id = parametros.id as string;
-  const [midia, definirMidia] = useState<any>(null);
+  const [midia, definirMidia] = useState<DetalhesMidia | null>(null);
   const [idImdb, definirIdImdb] = useState<string | null>(null);
   const [carregando, definirCarregando] = useState(true);
   const [temporadaSelecionada, definirTemporadaSelecionada] = useState<number | null>(null);
-  const [episodios, definirEpisodios] = useState<any[]>([]);
+  const [episodios, definirEpisodios] = useState<Episodio[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -162,7 +193,7 @@ export default function PaginaAssistir() {
     );
   }
 
-  const contagemTemporadas = midia.totalSeasons ? parseInt(midia.totalSeasons, 10) : 0;
+  const contagemTemporadas = midia.totalSeasons || 0;
 
   return (
     <div className="min-h-screen bg-black font-sans text-white">
@@ -218,11 +249,10 @@ export default function PaginaAssistir() {
                   <button
                     key={temporada}
                     onClick={() => definirTemporadaSelecionada(temporada)}
-                    className={`px-4 py-2 rounded-full transition-colors duration-300 ${
-                      temporadaSelecionada === temporada
-                        ? "bg-yellow-500 text-black"
-                        : "bg-zinc-800 hover:bg-zinc-700"
-                    }`}
+                    className={`px-4 py-2 rounded-full transition-colors duration-300 ${temporadaSelecionada === temporada
+                      ? "bg-yellow-500 text-black"
+                      : "bg-zinc-800 hover:bg-zinc-700"
+                      }`}
                   >
                     Temporada {temporada}
                   </button>

@@ -1,119 +1,70 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import Image from "next/image";
 
-const API_KEY = "593491a8";
+const CHAVE_API_TMDB = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+const BASE_URL = "https://api.themoviedb.org/3";
+const URL_IMAGEM_POSTER = "https://image.tmdb.org/t/p/w500";
+const IMAGEM_PLACEHOLDER = "https://placehold.co/300x450/18181b/ffffff?text=Sem+Poster";
 
-async function getMediaDetails(id: string) {
+interface Serie {
+  id: number;
+  name: string;
+  first_air_date: string;
+  overview: string;
+  poster_path: string | null;
+  vote_average: number;
+}
+
+async function buscarSeriesPopulares(): Promise<Serie[]> {
   try {
-    const response = await axios.get("https://www.omdbapi.com/", {
-      params: { apikey: API_KEY, i: id },
+    const response = await axios.get(`${BASE_URL}/tv/popular`, {
+      params: { api_key: CHAVE_API_TMDB, language: "pt-BR" },
     });
-    return response.data;
+    return response.data.results;
   } catch (error) {
-    console.error("Erro ao buscar detalhes:", error);
-    return null;
+    console.error("Erro ao buscar séries populares:", error);
+    return [];
   }
 }
 
-async function getSeasonEpisodes(id: string, season: number | null) {
-  if (season === null) {
-    return [];
-  }
+async function buscarSeriesMaisBemAvaliadas(): Promise<Serie[]> {
   try {
-    const response = await axios.get("https://www.omdbapi.com/", {
-      params: { apikey: API_KEY, i: id, Season: season },
+    const response = await axios.get(`${BASE_URL}/tv/top_rated`, {
+      params: { api_key: CHAVE_API_TMDB, language: "pt-BR" },
     });
-    return response.data.Episodes;
+    return response.data.results;
   } catch (error) {
-    console.error(`Erro ao buscar episódios da temporada ${season}:`, error);
+    console.error("Erro ao buscar séries mais bem avaliadas:", error);
     return [];
   }
 }
 
 export default function SeriePage() {
-  const params = useParams();
-  const id = params.id as string;
-  const [media, setMedia] = useState<any>(null);
+  const [seriesPopulares, setSeriesPopulares] = useState<Serie[]>([]);
+  const [seriesMaisBemAvaliadas, setSeriesMaisBemAvaliadas] = useState<Serie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
-  const [episodes, setEpisodes] = useState<any[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
-    if (id) {
-      async function loadMedia() {
-        setLoading(true);
-        const details = await getMediaDetails(id);
-        setMedia(details);
-        setLoading(false);
-        if (details && details.Type === "series") {
-          setSelectedSeason(1);
-        }
-      }
-      loadMedia();
+    async function loadSeries() {
+      setLoading(true);
+      const [populares, maisBemAvaliadas] = await Promise.all([
+        buscarSeriesPopulares(),
+        buscarSeriesMaisBemAvaliadas(),
+      ]);
+      setSeriesPopulares(populares);
+      setSeriesMaisBemAvaliadas(maisBemAvaliadas);
+      setLoading(false);
     }
-  }, [id]);
+    loadSeries();
+  }, []);
 
-  useEffect(() => {
-    if (selectedSeason !== null && id) {
-      async function loadEpisodes() {
-        const seasonEpisodes = await getSeasonEpisodes(id, selectedSeason);
-        setEpisodes(seasonEpisodes);
-      }
-      loadEpisodes();
-    }
-  }, [selectedSeason, id]);
-
-  function openPlayer(episode?: any) {
-    let playerUrl = "";
-    let episodeTitle = "";
-
-    if (media.Type === "series" && episode) {
-      playerUrl = `https://playerflixapi.com/serie/${id}/${selectedSeason}/${episode.Episode}`;
-      episodeTitle = episode.Title;
-    } else if (media.Type === "movie") {
-      playerUrl = `https://playerflixapi.com/filme/${id}`;
-      episodeTitle = media.Title;
-    } else {
-      return;
-    }
-
-    const w = 1000;
-    const h = 700;
-    const left = window.screenX + (window.innerWidth - w) / 2;
-    const top = window.screenY + (window.innerHeight - h) / 2;
-
-    const newWin = window.open(
-      "",
-      `_blank`,
-      `toolbar=0,location=0,status=0,menubar=0,scrollbars=0,resizable=1,width=${w},height=${h},top=${top},left=${left}`
-    );
-
-    if (!newWin) {
-      alert("Pop-up bloqueado. Permita pop-ups para este site e tente novamente.");
-      return;
-    }
-
-    const html = `<!doctype html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="utf-8" />
-        <title>Player - ${episodeTitle}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <style>html,body{height:100%;margin:0;background:#000}iframe{width:100%;height:100%;border:0}</style>
-      </head>
-      <body>
-        <iframe src="${playerUrl}" frameborder="0" allowfullscreen allow="fullscreen"></iframe>
-      </body>
-      </html>`;
-
-    newWin.document.open();
-    newWin.document.write(html);
-    newWin.document.close();
-    newWin.focus();
+  function verDetalhes(id: number) {
+    router.push(`/watch/${id}`);
   }
 
   if (loading) {
@@ -124,103 +75,98 @@ export default function SeriePage() {
     );
   }
 
-  if (!media) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-black text-white">
-        <p className="text-2xl">Não foi possível carregar o conteúdo.</p>
-      </div>
-    );
-  }
-
-  const seasonCount = media.totalSeasons ? parseInt(media.totalSeasons, 10) : 0;
-
   return (
-    <div className="min-h-screen bg-black font-sans text-white p-8 mb-4">
+    <div className="min-h-screen bg-black font-sans text-white p-8">
       <div className="container mx-auto">
-        <div className="flex flex-col md:flex-row gap-8">
-          <div className="md:w-1/3">
-            {media.Poster && media.Poster !== "N/A" ? (
-              <Image
-                src={media.Poster}
-                alt={media.Title}
-                width={300}
-                height={450}
-                className="rounded-lg"
-              />
-            ) : (
-              <div className="w-[300px] h-[450px] bg-zinc-800 flex items-center justify-center rounded-lg">
-                <span className="text-zinc-500">Sem Imagem</span>
-              </div>
-            )}
-          </div>
-          <div className="md:w-2/3">
-            <h1 className="text-4xl font-bold mb-4">{media.Title}</h1>
-            <p className="text-zinc-400 mb-4">{media.Plot}</p>
-            <div className="flex gap-4 text-zinc-300 mb-8">
-              <span>{media.Year}</span>
-              <span>{media.Runtime}</span>
-              <span>{media.Genre}</span>
-              <span className="flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.784.57-1.838-.197-1.539-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.34 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.049 2.927z" />
-                </svg>
-                {media.imdbRating}
-              </span>
-            </div>
-            {media.Type === "movie" && (
-              <button
-                onClick={() => openPlayer()}
-                className="bg-yellow-500 text-black font-bold py-3 px-6 rounded-lg hover:bg-yellow-600 transition-colors duration-300"
+        <h1 className="text-4xl font-bold mb-8">Séries</h1>
+
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Séries Populares</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {seriesPopulares.map((serie) => (
+              <div
+                key={serie.id}
+                className="relative overflow-hidden rounded-lg shadow-lg cursor-pointer group"
+                onClick={() => verDetalhes(serie.id)}
               >
-                Assistir
-              </button>
-            )}
-          </div>
-        </div>
-
-        {media.Type === "series" && seasonCount > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-4">Temporadas</h2>
-            <div className="flex flex-wrap gap-2 mb-8">
-              {Array.from({ length: seasonCount }, (_, i) => i + 1).map(
-                (season) => (
-                  <button
-                    key={season}
-                    onClick={() => setSelectedSeason(season)}
-                    className={`px-4 py-2 rounded-full transition-colors duration-300 ${
-                      selectedSeason === season
-                        ? "bg-yellow-500 text-black"
-                        : "bg-zinc-800 hover:bg-zinc-700"
-                    }`}
-                  >
-                    Temporada {season}
-                  </button>
-                )
-              )}
-            </div>
-
-            {episodes.length > 0 && (
-              <div>
-                <h3 className="text-xl font-bold mb-4">
-                  Episódios - Temporada {selectedSeason}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {episodes.map((episode) => (
-                    <button
-                      key={episode.imdbID}
-                      onClick={() => openPlayer(episode)}
-                      className="bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors duration-300"
+                {serie.poster_path ? (
+                  <Image
+                    src={`${URL_IMAGEM_POSTER}${serie.poster_path}`}
+                    alt={serie.name}
+                    width={300}
+                    height={450}
+                    className="rounded-lg w-full h-auto"
+                  />
+                ) : (
+                  <div className="w-full h-[450px] bg-zinc-800 flex items-center justify-center rounded-lg">
+                    <span className="text-zinc-500">Sem Imagem</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 flex flex-col justify-end p-4 transition-all">
+                  <h3 className="text-sm font-bold truncate">{serie.name}</h3>
+                  <p className="text-xs text-zinc-300">
+                    {serie.first_air_date?.substring(0, 4) || "N/A"}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-yellow-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
                     >
-                      <h4 className="font-bold">{episode.Title}</h4>
-                      <p className="text-sm text-zinc-400">Episódio {episode.Episode}</p>
-                      <p className="text-sm text-zinc-400">Avaliação: {episode.imdbRating}</p>
-                    </button>
-                  ))}
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.784.57-1.838-.197-1.539-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.34 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.049 2.927z" />
+                    </svg>
+                    <span className="text-xs">{serie.vote_average.toFixed(1)}</span>
+                  </div>
                 </div>
               </div>
-            )}
+            ))}
           </div>
-        )}
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Séries Mais Bem Avaliadas</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {seriesMaisBemAvaliadas.map((serie) => (
+              <div
+                key={serie.id}
+                className="relative overflow-hidden rounded-lg shadow-lg cursor-pointer group"
+                onClick={() => verDetalhes(serie.id)}
+              >
+                {serie.poster_path ? (
+                  <Image
+                    src={`${URL_IMAGEM_POSTER}${serie.poster_path}`}
+                    alt={serie.name}
+                    width={300}
+                    height={450}
+                    className="rounded-lg w-full h-auto"
+                  />
+                ) : (
+                  <div className="w-full h-[450px] bg-zinc-800 flex items-center justify-center rounded-lg">
+                    <span className="text-zinc-500">Sem Imagem</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 flex flex-col justify-end p-4 transition-all">
+                  <h3 className="text-sm font-bold truncate">{serie.name}</h3>
+                  <p className="text-xs text-zinc-300">
+                    {serie.first_air_date?.substring(0, 4) || "N/A"}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-yellow-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.539 1.118l-3.368-2.448a1 1 0 00-1.175 0l-3.368 2.448c-.784.57-1.838-.197-1.539-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.34 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.049 2.927z" />
+                    </svg>
+                    <span className="text-xs">{serie.vote_average.toFixed(1)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
