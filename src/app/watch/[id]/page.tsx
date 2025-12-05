@@ -198,7 +198,7 @@ export default function PaginaAssistir() {
   return (
     <div className="min-h-screen bg-black font-sans text-white">
       <div
-        className="relative h-[600px] -mx-8 -mt-8"
+        className="relative h-[500px]"
         style={{
           backgroundImage: `url(${midia.Backdrop})`,
           backgroundSize: "cover",
@@ -206,7 +206,7 @@ export default function PaginaAssistir() {
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black"></div>
-        <div className="absolute bottom-0 left-0 p-8">
+        <div className="absolute bottom-0 left-0 p-8 w-full">
           <h1 className="text-5xl font-bold mb-4">{midia.Title}</h1>
           <div className="flex items-center gap-4 text-zinc-300 mb-4">
             <span className="flex items-center gap-1">
